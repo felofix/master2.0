@@ -1,0 +1,72 @@
+{
+  "mesh": {
+    "h5group": "/mesh",
+    "fname": "mesh.xdmf",
+    "mesh_key": "",
+    "is_dolfin": true,
+    "is_mesh": true,
+    "is_meshfunction": false,
+    "is_function": false,
+    "dim": -1
+  },
+  "cfun": {
+    "h5group": "/meshfunctions/cfun",
+    "fname": "cfun.xdmf:f",
+    "mesh_key": "mesh",
+    "is_dolfin": true,
+    "is_mesh": false,
+    "is_meshfunction": true,
+    "is_function": false,
+    "dim": 3
+  },
+  "ffun": {
+    "h5group": "/meshfunctions/ffun",
+    "fname": "triangle_mesh.xdmf:name_to_read",
+    "mesh_key": "mesh",
+    "is_dolfin": true,
+    "is_mesh": false,
+    "is_meshfunction": true,
+    "is_function": false,
+    "dim": 2
+  },
+  "efun": {
+    "h5group": "/meshfunctions/efun",
+    "fname": "line_mesh.xdmf:name_to_read",
+    "mesh_key": "mesh",
+    "is_dolfin": true,
+    "is_mesh": false,
+    "is_meshfunction": true,
+    "is_function": false,
+    "dim": 1
+  },
+  "vfun": {
+    "h5group": "/meshfunctions/vfun",
+    "fname": "vertex_mesh.xdmf:name_to_read",
+    "mesh_key": "mesh",
+    "is_dolfin": true,
+    "is_mesh": false,
+    "is_meshfunction": true,
+    "is_function": false,
+    "dim": 0
+  },
+  "info": {
+    "h5group": "/info",
+    "fname": "info.json",
+    "mesh_key": "",
+    "is_dolfin": false,
+    "is_mesh": false,
+    "is_meshfunction": false,
+    "is_function": false,
+    "dim": -1
+  },
+  "markers": {
+    "h5group": "/markers",
+    "fname": "markers.json",
+    "mesh_key": "",
+    "is_dolfin": false,
+    "is_mesh": false,
+    "is_meshfunction": false,
+    "is_function": false,
+    "dim": -1
+  }
+}
