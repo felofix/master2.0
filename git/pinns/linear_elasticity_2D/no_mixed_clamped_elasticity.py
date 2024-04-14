@@ -43,6 +43,10 @@ def manu_elasticity_solve(nx, ny, n_hid, n_neu, epochs, lr, activation_function 
 	xij, yij = np.meshgrid(x, y)	
 	x_flat, y_flat = xij.flatten(), yij.flatten()
 
+	prettyx, prettyy = np.linspace(0, 1, 200), np.linspace(0, 1, 200)
+	prettyx, prettyy = np.meshgrid(prettyx, prettyy)	
+	prettyx, prettyy = prettyx.flatten(), prettyy.flatten()	
+
 	# Boundary conditions. 
 	left = np.arange(0, n_width * n_length, n_length)
 	right = np.arange(n_length - 1, (n_length) * n_width, (n_length))
@@ -52,23 +56,23 @@ def manu_elasticity_solve(nx, ny, n_hid, n_neu, epochs, lr, activation_function 
 
 	internal_losses = []
 	dirichlet_losses = []
-	sigma_losses = []
 	neumann_losses = []
 
 	f_x = 2*Pi*Pi*k*k*mu*np.sin(Pi*k*x_flat) + Pi*Pi*k*k*mu*np.sin(Pi*k*y_flat)*np.cos(Pi*k*x_flat) - \
 		  lambda_*(-Pi*Pi*k*k*np.sin(Pi*k*x_flat) - Pi*Pi*k*k*np.sin(Pi*k*y_flat)*np.cos(Pi*k*x_flat))
 
 	f_y = Pi*Pi*k*k*lambda_*np.sin(Pi*k*x_flat)*np.cos(Pi*k*y_flat) + 3*Pi*Pi*k*k*mu*np.sin(Pi*k*x_flat)*np.cos(Pi*k*y_flat)
+
+	sigmas = 0
 	
 	for epoch in range(epochs):
-		internal_loss, dirichlet_loss, neumann_loss, sigma_loss = loss_function(x_flat, y_flat, net, left, right, bottom, top, internal, f_x, f_y, epoch, k)
+		internal_loss, dirichlet_loss, neumann_loss = loss_function(x_flat, y_flat, net, left, right, bottom, top, internal, f_x, f_y, epoch, k)
 		
 		internal_losses.append(internal_loss.item())
 		dirichlet_losses.append(dirichlet_loss.item())
 		neumann_losses.append(neumann_loss.item())
-		sigma_losses.append(sigma_loss.item())
 
-		loss = internal_loss + dirichlet_loss + neumann_loss + sigma_loss
+		loss = internal_loss + dirichlet_loss + neumann_loss
 
 		print(dirichlet_loss.item(), epoch)
 		optimizer.zero_grad()
@@ -78,7 +82,10 @@ def manu_elasticity_solve(nx, ny, n_hid, n_neu, epochs, lr, activation_function 
 	if not verbose:
 		return net
 	else:
-		return net, internal_losses, dirichlet_losses, neumann_losses, sigma_losses
+		prettyx, prettyy = create_tensor(prettyx.reshape(-1, 1)), create_tensor(prettyy.reshape(-1, 1))
+		u_pretty = net([prettyx, prettyy])
+		sigma_xx, sigma_yy, sigma_xy = create_sigma(u_pretty[:, 0], u_pretty[:, 1], prettyx, prettyy)
+		return net, internal_losses, dirichlet_losses, neumann_losses, [sigma_xx.detach().numpy(), sigma_yy.detach().numpy(), sigma_xy.detach().numpy()]
 
 class Net(nn.Module):
 	def __init__(self, num_hidden_layers, num_neurons, ninputs, noutputs, activation_function):
@@ -174,7 +181,7 @@ def loss_function(x, y, net, left, right, bottom, top, internal, f_x, f_y, epoch
 	
 	neumann_loss = torch.mean(torch.square(t_left_x_prep)) + torch.mean(torch.square(t_left_y_prep))
 
-	return internal_loss , dirichlet_loss ,neumann_loss , sigma_loss
+	return internal_loss, dirichlet_loss, neumann_loss
 
 def create_tensor(k):
 	tensor = torch.tensor(k, dtype=torch.float32, requires_grad=True).to(device)

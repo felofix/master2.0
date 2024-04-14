@@ -13,15 +13,16 @@ import matplotlib.pyplot as plt
 Pi = np.pi
 
 # Parameters
-mu = nn.Parameter(torch.tensor(0.5, requires_grad = True))
-lambda_ = nn.Parameter(torch.tensor(0.5, requires_grad = True))
+mu = nn.Parameter(torch.tensor(2.5, requires_grad = True))
+lambda_ = nn.Parameter(torch.tensor(1.5, requires_grad = True))
 
-def manu_elasticity_inverse_solve(nx, ny, n_hid, n_neu, epochs, lr, activation_function = nn.Tanh(), verbose=False, k = 1, exact_data_type='stress', seed=1234):
+def manu_elasticity_inverse_solve(nx, ny, n_hid, n_neu, epochs, lr, activation_function = nn.Tanh(), verbose=False, k = 1, exact_data_type='stress', seed=1234, fixed = None):
 	"""
 	PARAMETERS:
 	n_hid = Number of hidden layers.
 	n_neu = Number of neurons in each hidden layer.
 	"""
+	global mu, lambda_
 
 	torch.manual_seed(seed)
 	np.random.seed(seed)
@@ -37,7 +38,16 @@ def manu_elasticity_inverse_solve(nx, ny, n_hid, n_neu, epochs, lr, activation_f
 	# Neural network.
 	net = Net(n_hid, n_neu, n_inputs, n_outputs, activation_function)
 	net = net.to(device)
-	optimizer = torch.optim.Adam(list(net.parameters()) + [mu] + [lambda_] , lr=lr)
+
+	if fixed == 'mu':
+		mu = 1.0
+		optimizer = torch.optim.Adam(list(net.parameters()) + [lambda_] , lr=lr)
+	elif fixed == 'lambda':
+		lambda_ = 0.5
+		optimizer = torch.optim.Adam(list(net.parameters()) + [mu] , lr=lr)
+
+	else:
+		optimizer = torch.optim.Adam(list(net.parameters()) + [mu] + [lambda_] , lr=lr)
 
 	x = np.linspace(0, lenght, n_length)
 	y = np.linspace(0, width, n_width)
@@ -75,8 +85,18 @@ def manu_elasticity_inverse_solve(nx, ny, n_hid, n_neu, epochs, lr, activation_f
 			internal_loss, exact_loss, lame_loss = strain_loss_with_boundaries(x_flat, y_flat, net, k, exact, left, right, bottom, top)
 
 		loss = internal_loss + exact_loss + lame_loss
-		mus.append(mu.item())
-		lambdas.append(lambda_.item())
+
+		if fixed == 'mu':
+			lambdas.append(lambda_.item())
+			mus.append(mu)
+		elif fixed == 'lambda':
+			lambdas.append(lambda_)
+			mus.append(mu.item())
+
+		else:
+			lambdas.append(lambda_.item())
+			mus.append(mu.item())
+
 		optimizer.zero_grad()
 		loss.backward()
 		optimizer.step()

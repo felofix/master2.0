@@ -3,6 +3,7 @@ import numpy as np
 sys.path.append('../pinns/linear_elasticity_2D')
 import clamped_elasticity_pytorch as cep
 import clamped_elasticity_inverse_pytorch as ceip
+import no_mixed_clamped_elasticity as nmce
 import matplotlib.pyplot as plt
 import torch
 import seaborn as sns
@@ -26,15 +27,23 @@ def plot_elasticity_pinn_and_exact():
 	exact = u_exact(x, y, k, mu, lambda_)
 
 	# Predicting. 
-	network, internal_losses, dirichlet_losses, neumann_losses, sigma_losses = cep.manu_elasticity_solve(20, 20, 4, 40, 200000, 1e-3, k=k, verbose=True)
+	network, internal_losses, dirichlet_losses, neumann_losses, sigma_losses = cep.manu_elasticity_solve(20, 20, 4, 40, 400000, 1e-3, k=k, verbose=True)
+	bad_network, bad_internal_losses, bad_dirichlet_losses, bad_neumann_losses, sigmas = nmce.manu_elasticity_solve(20, 20, 4, 40, 400000, 1e-3, k=k, verbose=True)
 	pinns = cep.predict(network, xij, yij)
+	bad_pinns = nmce.predict(bad_network, xij, yij)
+
+	total_loss_mixed = np.array(internal_losses) + np.array(dirichlet_losses) + np.array(neumann_losses) + np.array(sigma_losses)
+
+	total_loss_no_mixed = np.array(bad_internal_losses) + np.array(bad_dirichlet_losses) + np.array(bad_neumann_losses) 
+	
+	mses_mixed_vs_no_mixed(total_loss_mixed, total_loss_no_mixed)
 
 	# Printing the errors. 
-	print(f'The MSE for u_x using PINNS is: {mean_squared_error(exact["u_x"], pinns[:, 0])}')
-	print(f'The MSE for u_y using PINNS is: {mean_squared_error(exact["u_y"], pinns[:, 1])}')
-	print(f'The MSE for s_xx using PINNS is: {mean_squared_error(exact["s_xx"], pinns[:, 2])}')
-	print(f'The MSE for s_yy using PINNS is: {mean_squared_error(exact["s_yy"], pinns[:, 3])}')
-	print(f'The MSE for s_xy using PINNS is: {mean_squared_error(exact["s_xy"], pinns[:, 4])}')
+	print(f'The MSE for u_x using Mixed PINNS is: {mean_squared_error(exact["u_x"], pinns[:, 0])}')
+	print(f'The MSE for u_y using Mixed PINNS is: {mean_squared_error(exact["u_y"], pinns[:, 1])}')
+	print(f'The MSE for s_xx using Mixed PINNS is: {mean_squared_error(exact["s_xx"], pinns[:, 2])}')
+	print(f'The MSE for s_yy using Mixed PINNS is: {mean_squared_error(exact["s_yy"], pinns[:, 3])}')
+	print(f'The MSE for s_xy using Mixed PINNS is: {mean_squared_error(exact["s_xy"], pinns[:, 4])}')
 
 	# Printing the errors. 
 	print(f'The MSE for u_x using FEM is: {mean_squared_error(exact["u_x"], fenics[:, 0])}')
@@ -43,22 +52,43 @@ def plot_elasticity_pinn_and_exact():
 	print(f'The MSE for s_yy using FEM is: {mean_squared_error(exact["s_yy"], fenics[:, 3])}')
 	print(f'The MSE for s_xy using FEM is: {mean_squared_error(exact["s_xy"], fenics[:, 4])}')
 
-	create_comparison_plots(pinns, exact, fenics, x, y, "plots_linear_2D/comparison.png")
-	plot_losses(internal_losses, dirichlet_losses, neumann_losses, sigma_losses)
-	
+	# No mixed. 
+	print(f'The MSE for u_x using Mixed PINNS is: {mean_squared_error(exact["u_x"], bad_pinns[:, 0])}')
+	print(f'The MSE for u_y using Mixed PINNS is: {mean_squared_error(exact["u_y"], bad_pinns[:, 1])}')
+	print(f'The MSE for s_xx using Mixed PINNS is: {mean_squared_error(exact["s_xx"], sigmas[0].squeeze())}')
+	print(f'The MSE for s_yy using Mixed PINNS is: {mean_squared_error(exact["s_yy"], sigmas[1].squeeze())}')
+	print(f'The MSE for s_xy using Mixed PINNS is: {mean_squared_error(exact["s_xy"], sigmas[2].squeeze())}')
 
-def plot_losses(internal_losses, dirichlet_losses, neumann_losses, sigma_losses):
-	epochs = np.arange(len(internal_losses))
-	plt.loglog(epochs, internal_losses, label="Physics loss")
-	plt.loglog(epochs, dirichlet_losses, label="Dirichlet loss")
-	plt.loglog(epochs, neumann_losses, label="Neumann loss")
-	plt.loglog(epochs, sigma_losses, label="Sigma losses")
+	no_mixed_pinns = [bad_pinns[:, 0], bad_pinns[:, 1], sigmas[0].squeeze(), sigmas[1].squeeze(), sigmas[2].squeeze()]
+
+	create_comparison_plots(pinns, no_mixed_pinns, exact, fenics, x, y, "plots_linear_2D/comparison.png")
+	create_difference_plots(pinns, exact, fenics, x, y, "plots_linear_2D/difference.png")
+	plot_losses(internal_losses, dirichlet_losses, neumann_losses, sigma_losses)
+
+def mses_mixed_vs_no_mixed(mixed_losses, no_mixed_losses):
+	epochs = np.arange(len(mixed_losses))
+	plt.loglog(epochs, mixed_losses, label="Mixed PINN loss",alpha=0.5)
+	plt.loglog(epochs, no_mixed_losses, label="No Mixed PINN loss",alpha=0.5)
 	plt.legend()
 	plt.xlabel("Epochs")
 	plt.ylabel("MSE")
+	plt.grid()
+	plt.savefig("plots_linear_2D/mixed_vs_nomixed_losses.pdf")
+	plt.close()
+
+def plot_losses(internal_losses, dirichlet_losses, neumann_losses, sigma_losses):
+	epochs = np.arange(len(internal_losses))
+	plt.loglog(epochs, internal_losses, label="Physics loss",alpha=0.5)
+	plt.loglog(epochs, dirichlet_losses, label="Dirichlet loss",alpha=0.5)
+	plt.loglog(epochs, neumann_losses, label="Neumann loss",alpha=0.5)
+	plt.loglog(epochs, sigma_losses, label="Sigma losses",alpha=0.5)
+	plt.legend()
+	plt.xlabel("Epochs")
+	plt.ylabel("MSE")
+	plt.grid()
 	plt.savefig("plots_linear_2D/losses.pdf")
 
-def create_comparison_plots(pinns, exact, fenics, x, y, savepath):
+def create_difference_plots(pinns, exact, fenics, x, y, savepath):
 	"""
 	Create a 3x5 subplot layout to compare PINN, exact, and FEniCS results.
 
@@ -69,6 +99,58 @@ def create_comparison_plots(pinns, exact, fenics, x, y, savepath):
 	- savepath: Where to save the figure.
 	"""
 	# Extract data
+
+	pinn_u_x, pinn_u_y, pinn_s_xx, pinn_s_yy, pinn_s_xy = pinns[:, 0], pinns[:, 1], pinns[:, 2], pinns[:, 3], pinns[:, 4]
+	exact_u_x, exact_u_y, exact_s_xx, exact_s_yy, exact_s_xy = exact['u_x'], exact['u_y'], exact['s_xx'], exact['s_yy'], exact['s_xy']
+	fenics_u_x, fenics_u_y, fenics_s_xx, fenics_s_yy, fenics_s_xy = fenics[:, 0], fenics[:, 1], fenics[:, 2], fenics[:, 3], fenics[:, 4]
+
+	d_u_x_pinn = abs(exact_u_x - pinn_u_x)
+	d_u_y_pinn = abs(exact_u_y - pinn_u_y)
+
+	d_u_x_fem = abs(exact_u_x - fenics_u_x)
+	d_u_y_fem = abs(exact_u_y - fenics_u_y)
+
+	# Maximums.
+	xmin = 0
+	xmax = 1
+	ymin = 0
+	ymax = 1
+
+	data_list = [
+		(d_u_x_pinn, '|PINN $u_x$ - exact $u_x$|'),
+		(d_u_y_pinn,'|PINN $u_y$ - exact $u_y$|'),
+		(d_u_x_fem, '|FEM $u_x$ - exact $u_x$|'),
+		(d_u_y_fem, '|FEM $u_y$ - exact $u_y$|'),
+	]
+
+	fig, axes = plt.subplots(2, 2, figsize=(8, 7))
+	for ax, (u, title) in zip(axes.flatten(), data_list):
+		cp = ax.scatter(x, y, c=u, alpha=0.7, cmap='jet', marker='o', s=int(2)) 
+		fig.colorbar(cp, ax=ax)  # Specify the ax argument here
+		ax.set_title(title)
+		ax.set_xticks([])
+		ax.set_yticks([])
+		ax.set_xlim([xmin, xmax])
+		ax.set_ylim([ymin, ymax])
+		ax.set_xlabel("x (m)")
+		ax.set_ylabel("y (m)")
+
+	plt.tight_layout()
+	plt.savefig(savepath, dpi=300)
+	plt.close()
+
+def create_comparison_plots(pinns, nmixed_pinns, exact, fenics, x, y, savepath):
+	"""
+	Create a 3x5 subplot layout to compare PINN, exact, and FEniCS results.
+
+	Parameters:
+	- pinns: Data from PINN simulations.
+	- exact: Exact solution data.
+	- fenics: Data from FEniCS simulations.
+	- savepath: Where to save the figure.
+	"""
+	# Extract data
+
 	pinn_u_x, pinn_u_y, pinn_s_xx, pinn_s_yy, pinn_s_xy = pinns[:, 0], pinns[:, 1], pinns[:, 2], pinns[:, 3], pinns[:, 4]
 	exact_u_x, exact_u_y, exact_s_xx, exact_s_yy, exact_s_xy = exact['u_x'], exact['u_y'], exact['s_xx'], exact['s_yy'], exact['s_xy']
 	fenics_u_x, fenics_u_y, fenics_s_xx, fenics_s_yy, fenics_s_xy = fenics[:, 0], fenics[:, 1], fenics[:, 2], fenics[:, 3], fenics[:, 4]
@@ -80,24 +162,29 @@ def create_comparison_plots(pinns, exact, fenics, x, y, savepath):
 	ymax = 1
 
 	data_list = [
-		(pinn_u_x, 'PINN $u_x$'),
-		(pinn_u_y, 'PINN $u_y$'),
-		(pinn_s_xx, 'PINN $s_{xx}$'),
-		(pinn_s_xy, 'PINN $s_{xy}$'),  # Assuming second variable is not used
-		(pinn_s_yy, 'PINN $s_{yy}$'),
+		(nmixed_pinns[0], 'PINN $u_x$'),
+		(nmixed_pinns[1], 'PINN $u_y$'),
+		(nmixed_pinns[2], 'PINN $s_{xx}$'),
+		(nmixed_pinns[4], 'PINN $s_{xy}$'),  # Assuming second variable is not used
+		(nmixed_pinns[3], 'PINN $s_{yy}$'),
+		(pinn_u_x, 'Mixed PINN $u_x$'),
+		(pinn_u_y, 'Mixed PINN $u_y$'),
+		(pinn_s_xx, 'Mixed PINN $s_{xx}$'),
+		(pinn_s_xy, 'Mixed PINN $s_{xy}$'),  # Assuming second variable is not used
+		(pinn_s_yy, 'Mixed PINN $s_{yy}$'),
 		(exact_u_x, 'Exact $u_x$'),
 		(exact_u_y, 'Exact $u_y$'),
 		(exact_s_xx, 'Exact $s_{xx}$'),
 		(exact_s_xy, 'Exact $s_{xy}$'),
 		(exact_s_yy, 'Exact $s_{yy}$'),
-		(fenics_u_x, 'FEniCS $u_x$'),
-		(fenics_u_y, 'FEniCS $u_y$'),
-		(fenics_s_xx, 'FEniCS $s_{xx}$'),
-		(fenics_s_xy, 'FEniCS $s_{xy}$'),
-		(fenics_s_yy, 'FEniCS $s_{yy}$')
+		(fenics_u_x, 'FEM $u_x$'),
+		(fenics_u_y, 'FEM $u_y$'),
+		(fenics_s_xx, 'FEM $s_{xx}$'),
+		(fenics_s_xy, 'FEM $s_{xy}$'),
+		(fenics_s_yy, 'FEM $s_{yy}$')
 	]
 
-	fig, axes = plt.subplots(3, 5, figsize=(7, 5))
+	fig, axes = plt.subplots(4, 5, figsize=(8, 7))
 	for ax, (u, title) in zip(axes.flatten(), data_list):
 		cp = ax.scatter(x, y, c=u, alpha=0.7, cmap='jet', marker='o', s=int(2)) 
 		ax.set_title(title)
@@ -117,7 +204,7 @@ def plot_inverse_elasticity_stress():
 	mu = 1
 	lambda_ = 0.5
 	seeds = [10, 123, 500, 1000, 2024]
-	epochs = 15000
+	epochs = 20000
 	epochs_list = np.arange(epochs)
 
 	fig, ax = plt.subplots()
@@ -132,6 +219,7 @@ def plot_inverse_elasticity_stress():
 		ax.plot(epochs_list, lambdas, color=colors[s],alpha=0.5)
 	
 	ax.legend()
+	plt.grid()
 	plt.savefig('plots_linear_2D/' + "inverse_parameters_stress.png", dpi=300)
 
 def plot_inverse_elasticity_strain():
@@ -139,7 +227,7 @@ def plot_inverse_elasticity_strain():
 	mu = 1
 	lambda_ = 0.5
 	seeds = [10, 123, 500, 1000, 2024]
-	epochs = 15000
+	epochs = 20000
 	epochs_list = np.arange(epochs)
 
 	fig, ax = plt.subplots()
@@ -154,10 +242,66 @@ def plot_inverse_elasticity_strain():
 		ax.plot(epochs_list, lambdas, color=colors[s],alpha=0.5)
 	
 	ax.legend()
+	plt.grid()
 	plt.savefig('plots_linear_2D/' + "inverse_parameters_strain.pdf", dpi=300)
 
+def plot_inverse_fixed():
+	mu = 1
+	lambda_ = 0.5
+	epochs = 50000
+	epochs_list = np.arange(epochs)
+
+	# Fix mu with stress. 
+	mus_mu_fixed, lambdas_mu_fixed = ceip.manu_elasticity_inverse_solve(20, 20, 4, 40, epochs, 1e-3, verbose=True, fixed='mu')
+
+	# Fix lambda with stress.
+	mus_lambda_fixed, lambdas_lambda_fixed = ceip.manu_elasticity_inverse_solve(20, 20, 4, 40, epochs, 1e-3, verbose=True, fixed='lambda')
+
+	# fix mu with strain. 
+	mus_mu_fixed_s, lambdas_mu_fixed_s = ceip.manu_elasticity_inverse_solve(20, 20, 4, 40, epochs, 1e-3, verbose=True, exact_data_type='strain', fixed='mu')
+
+	# Fix lambda with strain. 
+	mus_lambda_fixed_s, lambdas_lambda_fixed_s = ceip.manu_elasticity_inverse_solve(20, 20, 4, 40, epochs, 1e-3, verbose=True, exact_data_type='strain', fixed='lambda')
+
+	fig, ax = plt.subplots(2, 2, figsize=(10, 10))
+
+	ax[0,0].plot(epochs_list, lambdas_mu_fixed, alpha=0.5)
+	ax[0,0].hlines(y=lambda_, xmin=0, xmax=epochs, linewidth=1, color='black', linestyle='dashed', label='Exact $\mu$')
+	ax[0,0].set_xlabel("Epochs")
+	ax[0,0].set_title("$\mu$ fixed with stress data")
+	ax[0,0].grid()
+	ax[0,0].legend()
+
+	ax[1,0].plot(epochs_list, mus_lambda_fixed, alpha=0.5)
+	ax[1,0].hlines(y=mu, xmin=0, xmax=epochs, linewidth=1, color='black', linestyle='dashed', label='Exact $\lambda$')
+	ax[1,0].set_xlabel("Epochs")
+	ax[1,0].set_title("$\lambda$ fixed with stress data")
+	ax[1,0].grid()
+	ax[1,0].legend()
+
+	ax[0,1].plot(epochs_list, lambdas_mu_fixed_s, alpha=0.5)
+	ax[0,1].hlines(y=lambda_, xmin=0, xmax=epochs, linewidth=1, color='black', linestyle='dashed', label='Exact $\mu$')
+	ax[0,1].set_xlabel("Epochs")
+	ax[0,1].set_title("$\mu$ fixed with strain data")
+	ax[0,1].grid()
+	ax[0,1].legend()
+
+	ax[1,1].plot(epochs_list, mus_lambda_fixed_s, alpha=0.5)
+	ax[1,1].hlines(y=mu, xmin=0, xmax=epochs, linewidth=1, color='black', linestyle='dashed', label='Exact $\lambda$')
+	ax[1,1].set_xlabel("Epochs")
+	ax[1,1].set_title("$\mu$ fixed with strain data")
+	ax[1,1].grid()
+	ax[1,1].legend()
+
+	print(f"The last lambda with stress data was: {mus_mu_fixed[-1]:.4f}")
+	print(f"The last mu with stress data was: {lambdas_lambda_fixed[-1]:.4f}")
+	print(f"The last lambda with strain data was: {mus_mu_fixed_s[-1]:.4f}")
+	print(f"The last mu with strain data was: {lambdas_lambda_fixed_s[-1]:.4f}")
+
+	plt.savefig("plots_linear_2D/fixed_inverse.pdf")
+
 def plot_frequency_change():
-	ks = [1, 3, 5, 7, 9, 11]
+	ks = [1, 2, 3, 4, 5, 6]
 	epochs = 15000
 
 	nx = 200
@@ -189,6 +333,7 @@ def plot_frequency_change():
 	plt.ylabel('$MSE_{log}$')
 	plt.xlabel('Value of k')
 	plt.legend()
+	plt.grid()
 	plt.savefig('plots_linear_2D/' + "frquency_change.pdf", dpi=300)
 
 def contour_plot(x, y, u, title, savepath):
@@ -254,11 +399,12 @@ def r2_score(y_true, y_pred):
 
 
 if __name__ == '__main__':
-	#plot_elasticity_pinn_and_exact()
+	plot_elasticity_pinn_and_exact()
 	#plot_inverse_elasticity_stress()
 	#plot_inverse_elasticity_strain()
-	plot_frequency_change()
+	#plot_frequency_change()
 	#plot_inverse_with_boundaries()
+	#plot_inverse_fixed()
 
 
 
