@@ -238,99 +238,6 @@ def strain_loss(x, y, net, k, exact):
 
 	return internal_loss, exact_loss, epsilon_loss
 
-def strain_loss_with_boundaries(x, y, net, k, exact, left, right, bottom, top):
-	# Normals.
-	bottom_x = 0
-	bottom_y = -1
-
-	top_x = 0 
-	top_y = 1
-
-	x = create_tensor(x.reshape(-1, 1))
-	y = create_tensor(y.reshape(-1, 1))
-
-	# Tractions. 
-	t_x_bottom = create_tensor(-mu*Pi*k*torch.cos(k*Pi*x[bottom])*torch.cos(k*Pi*y[bottom])).reshape((-1, 1))
-	t_y_bottom =  create_tensor(-((2*Pi*k*mu*torch.sin(Pi*k*x[bottom])*torch.sin(Pi*k*y[bottom]) + \
-							lambda_*(-Pi*k*torch.sin(Pi*k*x[bottom])*torch.sin(Pi*k*y[bottom]) + Pi*k*torch.cos(Pi*k*x[bottom])))).reshape((-1, 1)))
-
-	t_x_top = create_tensor(mu*Pi*k*torch.cos(k*Pi*x[top])*torch.cos(k*Pi*y[top])).reshape((-1, 1))
-	t_y_top = create_tensor((2*Pi*k*mu*torch.sin(Pi*k*x[top])*torch.sin(Pi*k*y[top]) + \
-							lambda_*(-Pi*k*torch.sin(Pi*k*x[top])*torch.sin(Pi*k*y[top]) + Pi*k*torch.cos(Pi*k*x[top]))).reshape((-1, 1)))
-
-	# Forces.
-	f_x = 2*Pi*Pi*k*k*mu*torch.sin(Pi*k*x) + Pi*Pi*k*k*mu*torch.sin(Pi*k*y)*torch.cos(Pi*k*x) - \
-		  lambda_*(-Pi*Pi*k*k*torch.sin(Pi*k*x) - Pi*Pi*k*k*torch.sin(Pi*k*y)*torch.cos(Pi*k*x))
-
-	f_y = Pi*Pi*k*k*lambda_*torch.sin(Pi*k*x)*torch.cos(Pi*k*y) + 3*Pi*Pi*k*k*mu*torch.sin(Pi*k*x)*torch.cos(Pi*k*y)
-
-	# Tensors.
-	f_x = create_tensor(f_x.reshape((-1, 1)))
-	f_y = create_tensor(f_y.reshape((-1, 1)))
-
-	# Predicted values. 
-	u = net([x, y])
-	u_x = u[:, 0].reshape((-1, 1))
-	u_y = u[:, 1].reshape((-1, 1))
-	e_xx = u[:, 2].reshape((-1, 1))
-	e_yy = u[:, 3].reshape((-1, 1))
-	e_xy = u[:, 4].reshape((-1, 1))
-
-	epsilon_xx, epsilon_yy, epsilon_xy, sigma_xx, sigma_yy, sigma_xy = create_sigma(u_x, u_y, x, y)
-
-	# epsilon losses.
-	exx_loss = torch.mean(torch.square(epsilon_xx - e_xx))
-	eyy_loss = torch.mean(torch.square(epsilon_yy - e_yy))
-	exy_loss = torch.mean(torch.square(epsilon_xy - e_xy))
-	epsilon_loss = exx_loss + eyy_loss + exy_loss
-
-	# Dirichlet loss.
-	d_left_x_prep = torch.cat([u_x[left], u_x[right]], dim=0)
-	d_left_y_prep = torch.cat([u_y[left], u_y[right]], dim=0)
-
-	dirichlet_loss = torch.mean(torch.square(d_left_x_prep)) + torch.mean(torch.square(d_left_y_prep))
-
-	# Neumann loss. 
-	# Leftside. 
-	t_x_bottom_pred = sigma_xx[bottom]*bottom_x + sigma_xy[bottom]*bottom_y
-	t_y_bottom_pred = sigma_xy[bottom]*bottom_x + sigma_yy[bottom]*bottom_y
-	t_bottom_x_l = t_x_bottom_pred - t_x_bottom
-	t_bottom_y_l = t_y_bottom_pred - t_y_bottom
-
-	# Top.
-	t_x_top_pred = sigma_xx[top]*top_x + sigma_xy[top]*top_y
-	t_y_top_pred = sigma_xy[top]*top_x + sigma_yy[top]*top_y
-	t_top_x_l = t_x_top_pred - t_x_top
-	t_top_y_l = t_y_top_pred - t_y_top
-	
-	t_left_x_prep = torch.cat([t_bottom_x_l, t_top_x_l], dim=0)
-	t_left_y_prep = torch.cat([t_bottom_y_l, t_top_y_l], dim=0)
-	
-	neumann_loss = torch.mean(torch.square(t_left_x_prep)) + torch.mean(torch.square(t_left_y_prep))
-	
-	# Internal losses. 
-	sigma_x = diff(sigma_xx, x) + diff(sigma_xy, y) + f_x
-	sigma_y = diff(sigma_xy, x) + diff(sigma_yy, y) + f_y
-	sigma_x_loss = torch.mean(torch.square(sigma_x))
-	sigma_y_loss = torch.mean(torch.square(sigma_y)) 
-	internal_loss = sigma_x_loss + sigma_y_loss
-
-	# Exact loss.
-	e_x_loss = torch.mean(torch.square(u_x - exact["u_x"]))
-	e_y_loss = torch.mean(torch.square(u_y - exact["u_y"]))
-
-	exact_exx_loss = torch.mean(torch.square(e_xx - exact["e_xx"])) 
-	exact_eyy_loss = torch.mean(torch.square(e_yy - exact["e_yy"]))
-	exact_exy_loss = torch.mean(torch.square(e_xy - exact["e_xy"]))
-
-	exact_loss = e_x_loss + e_y_loss + exact_exx_loss + exact_eyy_loss + exact_exy_loss + dirichlet_loss + neumann_loss
-
-	return internal_loss, exact_loss, epsilon_loss
-
-def create_tensor(k):
-	tensor = torch.tensor(k, dtype=torch.float32, requires_grad=True).to(device)
-	return tensor
-
 def create_sigma(u_x, u_y, x, y):
 	du_x_x = diff(u_x, x)
 	du_y_y = diff(u_y, y)
@@ -347,6 +254,10 @@ def create_sigma(u_x, u_y, x, y):
 	sigma_xy = 2*mu*e_xy 
 
 	return e_xx, e_yy, e_xy, sigma_xx, sigma_yy, sigma_xy
+
+def create_tensor(k):
+	tensor = torch.tensor(k, dtype=torch.float32, requires_grad=True).to(device)
+	return tensor
 
 def diff(u, d):
 	return torch.autograd.grad(u, d, grad_outputs=torch.ones_like(u), create_graph=True, retain_graph=True)[0]

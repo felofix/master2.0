@@ -195,7 +195,7 @@ class Neo_hookian:
 
 		neumann_loss = torch.mean(torch.square(t_x_prep)) + torch.mean(torch.square(t_y_prep))
 
-		total_loss = PK_loss + internal_loss + dirichlet_loss*1e1 + neumann_loss*2
+		total_loss = PK_loss + internal_loss + dirichlet_loss*2 + neumann_loss*1e1
 
 		return total_loss
 

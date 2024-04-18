@@ -7,15 +7,15 @@ from torch.optim import lr_scheduler
 import torch.nn.init as init
 import matplotlib.pyplot as plt
 
-torch.manual_seed(1234)
-np.random.seed(1234)
-
 Pi = np.pi
 
 class Linear:
 	def __init__(self, model, n_hid, n_neu, epochs, problem = 'forward', \
 				 lr=1e-3, activation_function = nn.Tanh(),\
-				 n_inputs = 3, n_outputs = 9, exact = None):
+				 n_inputs = 3, n_outputs = 9, exact = None, seed=1234):
+
+		torch.manual_seed(seed)
+		np.random.seed(seed)
 
 		# Model specifics. 
 		self.problem = problem
@@ -32,8 +32,8 @@ class Linear:
 			self.lambda_ = 0.5
 
 		elif self.problem == "inverse":
-			self.mu = nn.Parameter(torch.tensor(1.5, requires_grad = True))
-			self.lambda_ = nn.Parameter(torch.tensor(1.0, requires_grad = True))
+			self.mu = nn.Parameter(torch.tensor(float(np.random.randint(5)), requires_grad = True))
+			self.lambda_ = nn.Parameter(torch.tensor(float(np.random.randint(5)), requires_grad = True))
 			self.optimizer = torch.optim.Adam(list(self.net.parameters()) + [self.mu] + [self.lambda_], lr=lr)
 
 		# lists of things.
@@ -71,80 +71,6 @@ class Linear:
 			self.optimizer.zero_grad()
 			loss.backward()
 			self.optimizer.step()
-
-	def forward_loss(self):
-
-		epi, endo, base = self.bi['epi'], self.bi['endo'], self.bi['base']
-
-		bnepix, bnepiy, bnepiz = create_tensor((self.bn['epi'][:, 0]).reshape(-1, 1)), \
-								 create_tensor((self.bn['epi'][:, 1]).reshape(-1, 1)), \
-								 create_tensor((self.bn['epi'][:, 2]).reshape(-1, 1))
-
-		bnendox, bnendoy, bnendoz = create_tensor((self.bn['endo'][:, 0]).reshape(-1, 1)), \
-								    create_tensor((self.bn['endo'][:, 1]).reshape(-1, 1)), \
-								    create_tensor((self.bn['endo'][:, 2]).reshape(-1, 1))
-
-		X, Y, Z = self.X, self.Y, self.Z
-		
-		# Create tensors.
-		X = create_tensor(X.reshape(-1, 1))
-		Y = create_tensor(Y.reshape(-1, 1))
-		Z = create_tensor(Z.reshape(-1, 1))
-
-		# Predicted values. 
-		u = self.net([X, Y, Z])
-		u_X =  u[:, 0].reshape(-1, 1)
-		u_Y =  u[:, 1].reshape(-1, 1)
-		u_Z =  u[:, 2].reshape(-1, 1)
-		s_xx = u[:, 3].reshape(-1, 1)
-		s_yy = u[:, 4].reshape(-1, 1)
-		s_zz = u[:, 5].reshape(-1, 1)
-		s_xy = u[:, 6].reshape(-1, 1)
-		s_xz = u[:, 7].reshape(-1, 1)
-		s_yz = u[:, 8].reshape(-1, 1)
-
-		# Calculated Piola - Kirchhoff stresses.
-		sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_xz, sigma_yz = self.create_sigma(u_X, u_Y, u_Z, X, Y, Z)  
-
-		# Sigma losses.
-		sxx_loss = torch.mean(torch.square(sigma_xx - s_xx))
-		syy_loss = torch.mean(torch.square(sigma_yy - s_yy))
-		szz_loss = torch.mean(torch.square(sigma_zz - s_zz))
-		sxy_loss = torch.mean(torch.square(sigma_xy - s_xy))
-		sxz_loss = torch.mean(torch.square(sigma_xz - s_xz))
-		syz_loss = torch.mean(torch.square(sigma_yz - s_yz))
-		sigma_loss = sxx_loss + syy_loss + szz_loss + sxy_loss + sxz_loss + syz_loss
-
-		# Internal losses. 
-		sigma_x = diff(s_xx, X) + diff(s_xy, Y) + diff(s_xz, Z)
-		sigma_y = diff(s_xy, X) + diff(s_yy, Y) + diff(s_yz, Z)
-		sigma_z = diff(s_xz, X) + diff(s_yz, Y) + diff(s_zz, Z)
-		sigma_x_loss = torch.mean(torch.square(sigma_x))
-		sigma_y_loss = torch.mean(torch.square(sigma_y)) 
-		sigma_z_loss = torch.mean(torch.square(sigma_z)) 
-		internal_loss = sigma_x_loss + sigma_y_loss + sigma_z_loss
-
-		# Boundary losses, should be changes it can taake general boundary conditions. 
-		# Dirichlet loss. 
-		D_X_prep = torch.cat([u_X[base]], dim=0)
-		D_Y_prep = torch.cat([u_Y[base]], dim=0)
-		D_Z_prep = torch.cat([u_Z[base]], dim=0)
-		dirichlet_loss = torch.mean(torch.square(D_X_prep)) + torch.mean(torch.square(D_Y_prep)) + torch.mean(torch.square(D_Z_prep))
-		
-		# Neumann loss. Gotta be a way to shortn this down. Also, im not sure about this. 
-		t_x_epi, t_y_epi, t_z_epi = self.create_traction(epi, bnepix, bnepiy, bnepiz, 0, s_xx, s_yy, s_zz, s_xy, s_xz, s_yz)
-		t_x_endo, t_y_endo, t_z_endo = self.create_traction(endo, bnendox, bnendoy, bnendoz, 1, s_xx, s_yy, s_zz, s_xy, s_xz, s_yz)
-						 
-		t_x_prep = torch.cat([t_x_epi, t_x_endo], dim=0)
-		t_y_prep = torch.cat([t_y_epi, t_y_endo], dim=0)
-		t_z_prep = torch.cat([t_z_epi, t_z_endo], dim=0)
-
-		neumann_loss = torch.mean(torch.square(t_x_prep)) + torch.mean(torch.square(t_y_prep)) + torch.mean(torch.square(t_z_prep))
-
-		#total_loss = dirichlet_loss + sigma_loss + internal_loss*1e-3 + neumann_loss*1e1
-		total_loss = dirichlet_loss*1e1 + sigma_loss + internal_loss + neumann_loss
-
-		return total_loss
 
 	def inverse_loss(self):
 		X, Y, Z = self.X, self.Y, self.Z
@@ -191,7 +117,7 @@ class Linear:
 		u_y_loss = torch.mean(torch.square(u_Y - create_tensor(self.exact['u_y'])))
 		u_z_loss = torch.mean(torch.square(u_Z - create_tensor(self.exact['u_z'])))
 
-		exact_sxx_loss = torch.mean(torch.square(s_xx - create_tensor(self.exact['s_xx'])))
+		exact_sxx_loss = torch.mean(torch.square(s_xx - create_tensor(self.exact['s_xx'])))    # Are these the correct shapes?
 		exact_syy_loss = torch.mean(torch.square(s_yy - create_tensor(self.exact['s_yy'])))
 		exact_szz_loss = torch.mean(torch.square(s_zz - create_tensor(self.exact['s_zz'])))
 		exact_sxy_loss = torch.mean(torch.square(s_xy - create_tensor(self.exact['s_xy'])))
@@ -205,16 +131,6 @@ class Linear:
 		total_loss = sigma_loss + internal_loss + exact_loss
 
 		return total_loss
-
-	def create_traction(self, bc, nx, ny, nz, t, s_xx, s_yy, s_zz, s_xy, s_xz, s_yz):
-		t_x = s_xx[bc]*nx + s_xy[bc]*ny + s_xz[bc]*nz
-		t_y = s_xy[bc]*nx + s_yy[bc]*ny + s_yz[bc]*nz
-		t_z = s_xz[bc]*nx + s_yz[bc]*ny + s_zz[bc]*nz
-
-		t_x_loss = t_x - t*nx
-		t_y_loss = t_y - t*ny
-		t_z_loss = t_z - t*nz
-		return t_x_loss, t_y_loss, t_z_loss
 		
 
 	def create_sigma(self, u_X, u_Y, u_Z, X, Y, Z):
@@ -256,6 +172,7 @@ class Linear:
 		sigma_yz = 2*self.mu*e_yz
 
 		return sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_xz, sigma_yz
+
 
 	def predict(self, x, y, z):
 		x = x.reshape(-1, 1)

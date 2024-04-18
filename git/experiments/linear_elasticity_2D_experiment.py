@@ -301,8 +301,8 @@ def plot_inverse_fixed():
 	plt.savefig("plots_linear_2D/fixed_inverse.pdf")
 
 def plot_frequency_change():
-	ks = [1, 2, 3, 4, 5, 6]
-	epochs = 15000
+	ks = [1, 2, 3, 4]
+	epochs = 50000
 
 	nx = 200
 	ny = 200
@@ -399,10 +399,10 @@ def r2_score(y_true, y_pred):
 
 
 if __name__ == '__main__':
-	plot_elasticity_pinn_and_exact()
+	#plot_elasticity_pinn_and_exact()
 	#plot_inverse_elasticity_stress()
 	#plot_inverse_elasticity_strain()
-	#plot_frequency_change()
+	plot_frequency_change()
 	#plot_inverse_with_boundaries()
 	#plot_inverse_fixed()
 

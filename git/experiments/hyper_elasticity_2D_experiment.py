@@ -141,13 +141,13 @@ def plot_inverse_elasticity():
 	epochs = 100000
 	epochs_list = np.arange(epochs)
 	mu = 1.0
-	lambda_ = 0.5
+	kappa = 0.5
 	seeds = [10, 123, 500]
 
 	fig, ax = plt.subplots()
 	ax.set_title("Inverse parameters calculated by PINN by using stress data")
 	ax.hlines(y=mu, xmin=0, xmax=epochs, linewidth=1, color='black', linestyle='dashed', label='$\mu*$')
-	ax.hlines(y=lambda_, xmin=0, xmax=epochs, linewidth=1, color='dimgray', linestyle='dashed', label='$\kappa*$')
+	ax.hlines(y=kappa, xmin=0, xmax=epochs, linewidth=1, color='dimgray', linestyle='dashed', label='$\kappa*$')
 	colors = plt.cm.viridis(np.linspace(0, 1, len(seeds)))
 
 	for s in range(len(seeds)):
@@ -167,7 +167,7 @@ def plot_inverse_elasticity():
 def plot_inverse_fixed():
 	mu = 1
 	kappa = 0.5
-	epochs = 300000
+	epochs = 200000
 	epochs_list = np.arange(epochs)
 
 	mu_fixed = nh.Neo_hookian(10, 10, 4, 40, epochs, fixed='mu', problem='inverse', exact=exact)	
@@ -238,8 +238,8 @@ def r2_score(y_true, y_pred):
 
 
 if __name__ == '__main__':
-	#plot_elasticity_pinn_and_exact()
-	plot_inverse_elasticity()
+	plot_elasticity_pinn_and_exact()
+	#plot_inverse_elasticity()
 	#plot_inverse_fixed()
 
 

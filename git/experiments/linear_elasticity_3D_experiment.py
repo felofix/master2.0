@@ -38,11 +38,11 @@ def create_elasticity_pinn_data():
 
 	print(f'The MSE for s_xx using Mixed PINNS is: {mean_squared_error(exact["s_xx"], sxx)}')
 	print(f'The MSE for s_yy using Mixed PINNS is: {mean_squared_error(exact["s_yy"], syy)}')
-	print(f'The MSE for s_xy using Mixed PINNS is: {mean_squared_error(exact["s_xy"], szz)}')
+	print(f'The MSE for s_xy using Mixed PINNS is: {mean_squared_error(exact["s_zz"], szz)}')
 
-	print(f'The MSE for s_xx using Mixed PINNS is: {mean_squared_error(exact["s_xx"], sxy)}')
-	print(f'The MSE for s_yy using Mixed PINNS is: {mean_squared_error(exact["s_yy"], sxz)}')
-	print(f'The MSE for s_xy using Mixed PINNS is: {mean_squared_error(exact["s_xy"], syz)}')
+	print(f'The MSE for s_xx using Mixed PINNS is: {mean_squared_error(exact["s_xy"], sxy)}')
+	print(f'The MSE for s_yy using Mixed PINNS is: {mean_squared_error(exact["s_xz"], sxz)}')
+	print(f'The MSE for s_xy using Mixed PINNS is: {mean_squared_error(exact["s_yz"], syz)}')
 
 	plot_loss(model.losses)
 
@@ -65,7 +65,7 @@ def plot_inverse_elasticity():
 	model.solve()
 
 	print(f'The last measured lambda value was: {model.lambdas[-1]:.2f}')
-	print(f'The last measured lambda value was: {model.mu[-1]:.2f}')
+	print(f'The last measured mu value was: {model.mu[-1]:.2f}')
 
 	fig, ax = plt.subplots()
 	ax.plot(epochs, model.lambdas, alpha=0.5, label='$\lambda$')
