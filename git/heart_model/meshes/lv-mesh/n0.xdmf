@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+    <Xdmf Version="2.0" xmlns:xi="http://www.w3.org/2001/XInclude">
+        <Domain>
+            
+<Grid Name="time_0" GridType="Uniform">
+    
+<Geometry GeometryType="XYZ">
+    <DataItem Dimensions="759 3" Format="HDF">n0.h5:/fiber/coordinates</DataItem>
+</Geometry>
+
+<Topology TopologyType="Polyvertex" NodesPerElement="759">
+</Topology>
+
+<Attribute Name="angle" AttributeType="Scalar" Center="Node">
+    <DataItem Format="HDF" Dimensions="759 1">n0.h5:/fiber/scalar</DataItem>
+</Attribute>
+
+<Attribute Name="fiber" AttributeType="Vector" Center="Node">
+    <DataItem Format="HDF" Dimensions="759 3">n0.h5:/fiber/vector</DataItem>
+</Attribute>
+
+</Grid>
+
+        </Domain>
+    </Xdmf>

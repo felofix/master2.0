@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import h5py
 
 class Preprocess:
-	
 	def __init__(self, filename):
 		"""	
 		I'm just going to try to remoove all points on the boundary so that I only need to trhink about the centroids oon the boundary. 
@@ -38,7 +37,9 @@ class Preprocess:
 		normal_epi = []
 		normal_base = []
 
+
 		for facet in facets(geo.mesh):
+
 			if geo.ffun[facet] == geo.markers["ENDO"][0]:
 				# Mid points.
 				vertices_mid = []

@@ -88,6 +88,42 @@ def plot_losses(internal_losses, dirichlet_losses, neumann_losses, sigma_losses)
 	plt.grid()
 	plt.savefig("plots_linear_2D/losses.pdf")
 
+def plot_mse_vs_parameter():
+	epochs = 20000
+	epochs_list = np.arange(epochs)
+
+	fig, ax = plt.subplots(2, 1, figsize=(8, 7))
+	losses, mus, lambdas = ceip.manu_elasticity_inverse_solve(20, 20, 4, 40, epochs, 1e-3, verbose=True, exact_data_type='strain', with_loss=True)	
+	ax[0].plot(mus, losses, label='$\mu$')
+	ax[1].plot(lambdas, losses, label='$\lambda$')
+	ax[0].set_yscale('log')
+	ax[1].set_yscale('log')
+	ax[0].set_xlabel("$\mu$")
+	ax[0].set_ylabel("loss")
+	ax[1].set_xlabel("$\lambda$")
+	ax[1].set_ylabel("loss")
+	ax[0].grid()
+	ax[1].grid()
+	ax[0].legend()
+	ax[1].legend()
+	plt.savefig('plots_linear_2D/' + "inverse_parameters_strain_mse_vs_parameter.pdf", dpi=300)
+
+	fig, ax = plt.subplots(2, 1, figsize=(8, 7))
+	losses, mus, lambdas = ceip.manu_elasticity_inverse_solve(20, 20, 4, 40, epochs, 1e-3, verbose=True, exact_data_type='stress', with_loss=True)	
+	ax[0].plot(mus, losses, label='$\mu$')
+	ax[1].plot(lambdas, losses, label='$\lambda$')
+	ax[0].set_xlabel("$\mu$")
+	ax[0].set_ylabel("loss")
+	ax[1].set_xlabel("$\lambda$")
+	ax[1].set_ylabel("loss")
+	ax[0].set_yscale('log')
+	ax[1].set_yscale('log')
+	ax[0].grid()
+	ax[1].grid()
+	ax[0].legend()
+	ax[1].legend()
+	plt.savefig('plots_linear_2D/' + "inverse_parameters_stress_mse_vs_parameter.pdf", dpi=300)
+
 def create_difference_plots(pinns, exact, fenics, x, y, savepath):
 	"""
 	Create a 3x5 subplot layout to compare PINN, exact, and FEniCS results.
@@ -402,9 +438,10 @@ if __name__ == '__main__':
 	#plot_elasticity_pinn_and_exact()
 	#plot_inverse_elasticity_stress()
 	#plot_inverse_elasticity_strain()
-	plot_frequency_change()
+	#plot_frequency_change()
 	#plot_inverse_with_boundaries()
 	#plot_inverse_fixed()
+	plot_mse_vs_parameter()
 
 
 

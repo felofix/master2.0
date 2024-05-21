@@ -2,23 +2,33 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 data = np.loadtxt('../data/heart_data/hyper_elasticity_data.txt', delimiter=',')
+data_a = np.loadtxt('../data/heart_data/hyper_elasticity_data_active.txt', delimiter=',')
 sys.path.append('../heart_model')
 import heart_model as hm
 sys.path.append('../pinns/hyper_heart')
 import hyper_elasticity as he
 np.random.seed(seed=1234)
 import copy
+import seaborn as sns
+
+exact = {"x": data[:, 0].reshape(-1, 1), "y": data[:, 1].reshape(-1, 1), "z": data[:, 2].reshape(-1, 1),\
+			 "u_x": data[:, 3].reshape(-1, 1), "u_y": data[:, 4].reshape(-1, 1), "u_z": data[:, 5].reshape(-1, 1),\
+			 "P_xx": data[:, 6].reshape(-1, 1), "P_yy": data[:, 7].reshape(-1, 1), "P_zz": data[:, 8].reshape(-1, 1),\
+			 "P_xy": data[:, 9].reshape(-1, 1), "P_yx": data[:, 10].reshape(-1, 1), "P_xz": data[:, 11].reshape(-1, 1), \
+			 "P_zx": data[:, 12].reshape(-1, 1), "P_yz": data[:, 13].reshape(-1, 1), "P_zy": data[:, 14].reshape(-1, 1)}
+
+exact_active = {"x": data[:, 0].reshape(-1, 1), "y": data[:, 1].reshape(-1, 1), "z": data[:, 2].reshape(-1, 1),\
+				"u_x": data[:, 3].reshape(-1, 1), "u_y": data[:, 4].reshape(-1, 1), "u_z": data[:, 5].reshape(-1, 1),\
+			 	"P_xx": data[:, 6].reshape(-1, 1), "P_yy": data[:, 7].reshape(-1, 1), "P_zz": data[:, 8].reshape(-1, 1),\
+			 	"P_xy": data[:, 9].reshape(-1, 1), "P_yx": data[:, 10].reshape(-1, 1), "P_xz": data[:, 11].reshape(-1, 1), \
+				"P_zx": data[:, 12].reshape(-1, 1), "P_yz": data[:, 13].reshape(-1, 1), "P_zy": data[:, 14].reshape(-1, 1), \
+				"f0_x": data_a[:, 15].reshape(-1, 1), "f0_y": data_a[:, 16].reshape(-1, 1), "f0_z": data_a[:, 17].reshape(-1, 1)}
 
 def inverse_heart():
 	mu = 1
 	kappa = 0.5
 
 	heart = hm.Heart_model("/Users/Felix/desktop/MASTER/git/master/heart_simulation/model/meshes/")
-	exact = {"x": data[:, 0].reshape(-1, 1), "y": data[:, 1].reshape(-1, 1), "z": data[:, 2].reshape(-1, 1),\
-			 "u_x": data[:, 3].reshape(-1, 1), "u_y": data[:, 4].reshape(-1, 1), "u_z": data[:, 5].reshape(-1, 1),\
-			 "P_xx": data[:, 6].reshape(-1, 1), "P_yy": data[:, 7].reshape(-1, 1), "P_zz": data[:, 8].reshape(-1, 1),\
-			 "P_xy": data[:, 9].reshape(-1, 1), "P_yx": data[:, 10].reshape(-1, 1), "P_xz": data[:, 11].reshape(-1, 1), \
-			 "P_zx": data[:, 12].reshape(-1, 1), "P_yz": data[:, 13].reshape(-1, 1), "P_zy": data[:, 14].reshape(-1, 1)}
 
 	epochs = 50000
 	epochs_list = np.arange(epochs)
@@ -42,7 +52,6 @@ def inverse_heart():
 	plt.grid()
 	plt.savefig("plots_heart_hyper/inverse.pdf")
 
-
 def inverse_heart_percentages():
 	"""Hmmm...
 	"""
@@ -51,11 +60,6 @@ def inverse_heart_percentages():
 
 	percentages = [0.95, 0.7, 0.5, 0.3]
 	heart = hm.Heart_model("/Users/Felix/desktop/MASTER/git/master/heart_simulation/model/meshes/")
-	exact = {"x": data[:, 0].reshape(-1, 1), "y": data[:, 1].reshape(-1, 1), "z": data[:, 2].reshape(-1, 1),\
-			 "u_x": data[:, 3].reshape(-1, 1), "u_y": data[:, 4].reshape(-1, 1), "u_z": data[:, 5].reshape(-1, 1),\
-			 "P_xx": data[:, 6].reshape(-1, 1), "P_yy": data[:, 7].reshape(-1, 1), "P_zz": data[:, 8].reshape(-1, 1),\
-			 "P_xy": data[:, 9].reshape(-1, 1), "P_yx": data[:, 10].reshape(-1, 1), "P_xz": data[:, 11].reshape(-1, 1), \
-			 "P_zx": data[:, 12].reshape(-1, 1), "P_yz": data[:, 13].reshape(-1, 1), "P_zy": data[:, 14].reshape(-1, 1)}
 	
 	epochs = 20000
 	epochs_list = np.arange(epochs)
@@ -98,15 +102,9 @@ def inverse_heart_noise():
 	mu = 1
 	kappa = 0.5
 
-	#noises = [0.5, 0.1,0.05,0.01]
 	noises = [0.1, 0.05,0.03, 0.01]
 
 	heart = hm.Heart_model("/Users/Felix/desktop/MASTER/git/master/heart_simulation/model/meshes/")
-	exact = {"x": data[:, 0].reshape(-1, 1), "y": data[:, 1].reshape(-1, 1), "z": data[:, 2].reshape(-1, 1),\
-			 "u_x": data[:, 3].reshape(-1, 1), "u_y": data[:, 4].reshape(-1, 1), "u_z": data[:, 5].reshape(-1, 1),\
-			 "P_xx": data[:, 6].reshape(-1, 1), "P_yy": data[:, 7].reshape(-1, 1), "P_zz": data[:, 8].reshape(-1, 1),\
-			 "P_xy": data[:, 9].reshape(-1, 1), "P_yx": data[:, 10].reshape(-1, 1), "P_xz": data[:, 11].reshape(-1, 1), \
-			 "P_zx": data[:, 12].reshape(-1, 1), "P_yz": data[:, 13].reshape(-1, 1), "P_zy": data[:, 14].reshape(-1, 1)}
 	
 	epochs = 20000
 	epochs_list = np.arange(epochs)
@@ -145,6 +143,100 @@ def inverse_heart_noise():
 def visualize():
 	heart = hm.Heart_model("/Users/Felix/desktop/MASTER/git/master/heart_simulation/model/meshes/")
 	heart.visualize_boundaries()
+
+def inverse_active_model():
+	mu = 1
+	kappa = 0.5
+	heart = hm.Heart_model("/Users/Felix/desktop/MASTER/git/master/heart_simulation/model/meshes/")
+	epochs = 50000
+
+	percentages = [0.95, 0.7, 0.5, 0.3]
+	noises = [0.1, 0.05,0.03, 0.01]
+
+	mistakes = np.zeros((len(percentages), len(noises)))
+
+	for p in range(len(percentages)):
+		for n in range(len(noises)):
+			newexact = remove_percentage(exact_active.copy(), percentages[p])
+			newexact = add_noise(newexact.copy(), noises[n])
+			pinn = he.Neo_Hookian(heart, 4, 40, epochs, problem='inverse', exact=newexact)
+			pinn.solve()
+			last_mu = pinn.mus[-1]
+			last_kappa = pinn.kappas[-1]
+			total_mistake = abs(last_mu - mu) + abs(last_kappa - kappa)
+			mistakes[p, n] = total_mistake
+
+	plot_heatmap(mistakes, percentages, noises, "Total deviation from $\mu$ and $\kappa$")
+
+
+def inverse_active_long():	
+	mu = 1
+	kappa = 0.5
+	heart = hm.Heart_model("/Users/Felix/desktop/MASTER/git/master/heart_simulation/model/meshes/")
+	epochs = 1000000
+	epochs_list = np.arange(epochs)
+	newexact = remove_percentage(exact_active.copy(), 0.95)
+	newexact = add_noise(newexact.copy(), 0.1)
+	pinn = he.Neo_Hookian(heart, 4, 40, epochs, problem='inverse', exact=newexact)
+	pinn.solve()
+
+	fig, ax = plt.subplots()
+	ax.set_title("Inverse parameters calculated by PINN by using stress data for the Neo Hookian model")
+	ax.hlines(y=mu, xmin=0, xmax=epochs, linewidth=1, color='black', linestyle='dashed', label='$\mu*$')
+	ax.hlines(y=kappa, xmin=0, xmax=epochs, linewidth=1, color='dimgray', linestyle='dashed', label='$\kappa*$')
+
+	ax.plot(epochs_list, pinn.mus,  alpha=0.5)
+	ax.plot(epochs_list, pinn.kappas,  alpha=0.5)
+
+	print(f'The last calculated mu was: {pinn.mus[-1]}')
+	print(f'The last calculated kappa was: {pinn.kappas[-1]}')
+	
+	ax.legend()
+	plt.grid()
+	plt.savefig("plots_heart_hyper/inverse_active_long.pdf")
+
+def create_heart_points_plot():
+	heart = hm.Heart_model("/Users/Felix/desktop/MASTER/git/master/heart_simulation/model/meshes/")
+	newexact = remove_percentage(exact_active.copy(), 0.95)
+	newexact = add_noise(newexact.copy(), 0.1)
+
+	fig = plt.figure()
+	ax = fig.add_subplot(111, projection='3d')
+	ax.scatter(exact["x"], exact["y"], exact["z"], alpha=0.1, color='black', label="Before")
+	ax.scatter(newexact["x"], newexact["y"], newexact["z"], color='red', label="After")
+	plt.legend()
+	plt.show()
+
+
+def plot_heatmap(matrix, row_labels, col_labels, title, cmap="YlGnBu"):
+	"""
+	Plot a heatmap using Seaborn.
+
+	Parameters:
+		matrix (numpy.array): 2D array to be plotted.
+		row_labels (list): Labels for the rows.
+		col_labels (list): Labels for the columns.
+		title (str): Title of the heatmap.
+		cmap (str, optional): Color map. Defaults to "YlGnBu".
+
+	Returns:
+		None
+	"""
+	plt.figure(figsize=(10, 8))
+	
+	# Create a heatmap using Seaborn
+	sns.heatmap(matrix, annot=True, cmap=cmap, cbar=True, 
+				xticklabels=col_labels, yticklabels=row_labels, 
+				fmt=".2e", linewidths=0.5)
+
+	# Setting the title
+	plt.title(title, fontsize=18)
+	
+	# Setting x and y labels
+	plt.xlabel('Noise values', fontsize=14)
+	plt.ylabel('Percentage values', fontsize=14)
+
+	plt.savefig("plots_heart_hyper/" + title)
 
 	
 def show_heart_before_and_after(x, y, z, ux, uy, uz):
@@ -255,8 +347,11 @@ def add_noise(exact, percentage):
 if __name__ == '__main__':
 	#inverse_heart()
 	#inverse_heart_percentages()
-	inverse_heart_noise()
+	#inverse_heart_noise()
 	#visualize()
+	#inverse_active_model()
+	#inverse_active_long()
+	create_heart_points_plot()
 
 
 

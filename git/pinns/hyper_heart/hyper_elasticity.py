@@ -12,7 +12,7 @@ Pi = np.pi
 class Neo_Hookian:
 	def __init__(self, model, n_hid, n_neu, epochs, problem = 'forward', \
 				 lr=1e-3, activation_function = nn.Tanh(),\
-				 n_inputs = 3, n_outputs = 12, exact = None, seed=1234, asf = None, Ta = 1):
+				 n_inputs = 3, n_outputs = 12, exact = None, seed=1234, asf = False, Ta = 1):
 
 		# asf = active strain formulation
 
@@ -22,7 +22,7 @@ class Neo_Hookian:
 		# Model specifics. 
 		self.problem = problem
 		self.exact = exact
-		self.afs = afs
+		self.asf = asf
 		self.Ta = Ta
 
 		# Neural network.
@@ -184,14 +184,14 @@ class Neo_Hookian:
 		     	 [Finv[0][2], Finv[1][2], Finv[2][2]]]
 
 		Cxx = FT[0][0] * F[0][0] + FT[0][1] * F[1][0] + FT[0][2] * F[2][0]
-		Cxy1= FT[0][0] * F[0][1] + FT[0][1] * F[1][1] + FT[0][2] * F[2][1]
+		Cxy = FT[0][0] * F[0][1] + FT[0][1] * F[1][1] + FT[0][2] * F[2][1]
 		Cxz = FT[0][0] * F[0][2] + FT[0][1] * F[1][2] + FT[0][2] * F[2][2]
 
 		Cyx = FT[1][0] * F[0][0] + FT[1][1] * F[1][0] + FT[1][2] * F[2][0]
 		Cyy = FT[1][0] * F[0][1] + FT[1][1] * F[1][1] + FT[1][2] * F[2][1]
 		Cyz = FT[1][0] * F[0][2] + FT[1][1] * F[1][2] + FT[1][2] * F[2][2]
 
-		Czx= FT[2][0] * F[0][0] + FT[2][1] * F[1][0] + FT[2][2] * F[2][0]
+		Czx = FT[2][0] * F[0][0] + FT[2][1] * F[1][0] + FT[2][2] * F[2][0]
 		Czy = FT[2][0] * F[0][1] + FT[2][1] * F[1][1] + FT[2][2] * F[2][1]
 		Czz = FT[2][0] * F[0][2] + FT[2][1] * F[1][2] + FT[2][2] * F[2][2]
 
@@ -199,7 +199,7 @@ class Neo_Hookian:
 			 [Cyx, Cyy, Cyz],
 			 [Czx, Czy, Czz]]
 
-		active_strain_f = Ta*self.active_strain(C)
+		active_strain_f = 0#self.Ta*self.active_strain(C)
 
 		PK_xx = self.mu*F[0][0] - self.mu*FTinv[0][0] + self.kappa*torch.log(J)*FTinv[0][0] + active_strain_f
 		PK_yy = self.mu*F[1][1] - self.mu*FTinv[1][1] + self.kappa*torch.log(J)*FTinv[1][1] + active_strain_f
@@ -217,15 +217,15 @@ class Neo_Hookian:
 		return PK_xx, PK_yy, PK_zz, PK_xy, PK_yx, PK_xz, PK_zx, PK_yz, PK_zy
 
 	def active_strain(self, C):
-		if self.asf == None:
+		if self.asf == False:
 			return 0 
-		# Create C.
+		
 		else:
-			fx = create_tensor(self.asf[:, 0].reshape(-1, 1))
-			fy = create_tensor(self.asf[:, 1].reshape(-1, 1))
-			fz = create_tensor(self.asf[:, 2].reshape(-1, 1))
+			fx = create_tensor(self.exact["f0_x"])
+			fy = create_tensor(self.exact["f0_y"])
+			fz = create_tensor(self.exact["f0_z"])
 
-			astrain = fx**2*C[0][0] + 2*fx*fy*C[0][1] + 2*fx*fz*C[0][2] + fy**2*C[1][1] + 2*fy*fz*C[1][2] + fz**2*C[2][2]
+			astrain = fx**2*C[0][0] + 2*fx*fy*C[0][1] + 2*fx*fz*C[0][2] + fy**2*C[1][1] + 2*fy*fz*C[1][2] + fz**2*C[2][2] - 1
 
 			return astrain
 

@@ -49,36 +49,6 @@
     "is_function": false,
     "dim": 0
   },
-  "f0": {
-    "h5group": "/microstructure/f0",
-    "fname": "microstructure.h5:f0",
-    "mesh_key": "mesh",
-    "is_dolfin": true,
-    "is_mesh": false,
-    "is_meshfunction": false,
-    "is_function": true,
-    "dim": -1
-  },
-  "s0": {
-    "h5group": "/microstructure/s0",
-    "fname": "microstructure.h5:s0",
-    "mesh_key": "mesh",
-    "is_dolfin": true,
-    "is_mesh": false,
-    "is_meshfunction": false,
-    "is_function": true,
-    "dim": -1
-  },
-  "n0": {
-    "h5group": "/microstructure/n0",
-    "fname": "microstructure.h5:n0",
-    "mesh_key": "mesh",
-    "is_dolfin": true,
-    "is_mesh": false,
-    "is_meshfunction": false,
-    "is_function": true,
-    "dim": -1
-  },
   "info": {
     "h5group": "/info",
     "fname": "info.json",

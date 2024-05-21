@@ -16,7 +16,7 @@ Pi = np.pi
 mu = nn.Parameter(torch.tensor(2.5, requires_grad = True))
 lambda_ = nn.Parameter(torch.tensor(1.5, requires_grad = True))
 
-def manu_elasticity_inverse_solve(nx, ny, n_hid, n_neu, epochs, lr, activation_function = nn.Tanh(), verbose=False, k = 1, exact_data_type='stress', seed=1234, fixed = None):
+def manu_elasticity_inverse_solve(nx, ny, n_hid, n_neu, epochs, lr, activation_function = nn.Tanh(), verbose=False, k = 1, exact_data_type='stress', seed=1234, fixed = None,with_loss = False):
 	"""
 	PARAMETERS:
 	n_hid = Number of hidden layers.
@@ -67,6 +67,7 @@ def manu_elasticity_inverse_solve(nx, ny, n_hid, n_neu, epochs, lr, activation_f
 	sigma_losses = []
 	mus = []
 	lambdas = []
+	losses = []
 
 	x_flat = np.concatenate((x_flat, x_flat[left], x_flat[top], x_flat[right], x_flat[bottom]), 0)
 	y_flat = np.concatenate((y_flat, y_flat[left], y_flat[top], y_flat[right], y_flat[bottom]), 0)
@@ -81,10 +82,10 @@ def manu_elasticity_inverse_solve(nx, ny, n_hid, n_neu, epochs, lr, activation_f
 			internal_loss, exact_loss, lame_loss = stress_loss(x_flat, y_flat, net, k, exact)
 		elif exact_data_type == 'strain':
 			internal_loss, exact_loss, lame_loss = strain_loss(x_flat, y_flat, net, k, exact)
-		elif exact_data_type == 'strain_with_boundaries':
-			internal_loss, exact_loss, lame_loss = strain_loss_with_boundaries(x_flat, y_flat, net, k, exact, left, right, bottom, top)
 
 		loss = internal_loss + exact_loss + lame_loss
+
+		losses.append(loss.item())
 
 		if fixed == 'mu':
 			lambdas.append(lambda_.item())
@@ -104,8 +105,12 @@ def manu_elasticity_inverse_solve(nx, ny, n_hid, n_neu, epochs, lr, activation_f
 
 	if not verbose:
 		return net, mu.item(), lambda_.item()
-	else:
+
+	elif with_loss == False:
 		return mus, lambdas
+
+	else:
+		return losses, mus, lambdas
 
 class Net(nn.Module):
 	def __init__(self, num_hidden_layers, num_neurons, ninputs, noutputs, activation_function):

@@ -68,7 +68,7 @@ def active_stress_energy(F: ufl.Coefficient, f0: dolfin.Function, Ta: dolfin.Con
     I4f = dolfin.inner(F * f0, F * f0)
     return 0.5 * Ta * (I4f - 1)
 
-def solve_neo_hookian_heart():
+def solve_neo_hookian_heart(active_stress = False):
 	filename = "/Users/Felix/desktop/New master folder/master2.0/git/heart_model/meshes/lv-mesh"
 	geo = cardiac_geometries.geometry.Geometry.from_folder(filename)
 
@@ -87,7 +87,10 @@ def solve_neo_hookian_heart():
 	# Active tension
 	Ta = dolfin.Constant(1.0)
 	# Set fiber direction to be constant in the x-direction
-	f0 = dolfin.Constant([1.0, 0.0, 0.0])
+	if active_stress == True:
+		f0 = geo.f0
+	else:
+		f0 = 0
 
 	# Marking.
 	for facet in dolfin.facets(geo.mesh):
@@ -110,7 +113,7 @@ def solve_neo_hookian_heart():
 
 	J = dolfin.det(F)
 
-	elastic_energy = neo_hookean(F) + compressibility(F)
+	elastic_energy = neo_hookean(F) + compressibility(F) + active_stress_energy(F, f0, Ta)
 
 	# Dirichlet bouondaries. 
 	dirichlet_base = dolfin.DirichletBC(V, dolfin.Constant((0.0, 0.0, 0.0)), boundaries, 3)
@@ -160,8 +163,13 @@ def solve_neo_hookian_heart():
 	P_yz_array = []
 	P_zy_array = []
 
+	f0_array = []
+
 	for vertex in dolfin.vertices(mesh):
 		point = vertex.point()
+		if active_stress == True:
+			f0_array.append(f0(point))
+
 		P_xx_array.append(P_xx(point))
 		P_yy_array.append(P_yy(point))
 		P_zz_array.append(P_zz(point))
@@ -178,47 +186,18 @@ def solve_neo_hookian_heart():
 	# Now mesh.coordinates() will return the new coordinates of the mesh vertices
 	coordinates_after = mesh.coordinates()
 
-	return coordinates_before, coordinates_after, coordinates_after - coordinates_before, P_xx_array, P_yy_array, P_zz_array, P_xy_array, P_yx_array, P_xz_array, P_zx_array, P_yz_array, P_zy_array
+	return coordinates_before, coordinates_after, coordinates_after - coordinates_before, P_xx_array, P_yy_array, P_zz_array, P_xy_array, P_yx_array, P_xz_array, P_zx_array, P_yz_array, P_zy_array, np.array(f0_array)
 
-cb, ca, g, P_xx_array, P_yy_array, P_zz_array, P_xy_array, P_yx_array, P_xz_array, P_zx_array, P_yz_array, P_zy_array = solve_neo_hookian_heart()
+
+cb, ca, g, P_xx_array, P_yy_array, P_zz_array, P_xy_array, P_yx_array, P_xz_array, P_zx_array, P_yz_array, P_zy_array, f0 = solve_neo_hookian_heart()
 
 with open('../data/heart_data/hyper_elasticity_data.txt', 'w') as file:
     for i in range(len(P_xx_array)):
         file.write(f'{cb[:, 0][i]}, {cb[:, 1][i]}, {cb[:, 2][i]}, {g[:, 0][i]}, {g[:, 1][i]}, {g[:, 2][i]} ,{P_xx_array[i]}, {P_yy_array[i]}, {P_zz_array[i]}, {P_xy_array[i]}, {P_yx_array[i]}, {P_xz_array[i]}, {P_zx_array[i]}, {P_yz_array[i]},  {P_zy_array[i]}\n')
 
-fig = plt.figure()
-ax = fig.add_subplot(projection='3d')	
-ax.scatter(cb[:, 0], cb[:, 1], cb[:, 2], color='black', label='before')
-ax.scatter(ca[:, 0], ca[:, 1], ca[:, 2	], color='red', label='after')
-ax.set_xlabel('X Label')
-ax.set_ylabel('Y Label')
-ax.set_zlabel('Z Label')
-plt.legend()
-plt.show()
+cb, ca, g, P_xx_array, P_yy_array, P_zz_array, P_xy_array, P_yx_array, P_xz_array, P_zx_array, P_yz_array, P_zy_array, f0 = solve_neo_hookian_heart(active_stress = True)
 
-fig = plt.figure()
-ax = fig.add_subplot(projection='3d')	
-scatter = ax.scatter(cb[:, 0], cb[:, 1], cb[:, 2],c=g[:,0])
-plt.colorbar(scatter)
-ax.set_xlabel('X Label')
-ax.set_ylabel('Y Label')
-ax.set_zlabel('Z Label')
-plt.show()
 
-fig = plt.figure()
-ax = fig.add_subplot(projection='3d')	
-scatter = ax.scatter(cb[:, 0], cb[:, 1], cb[:, 2],c=g[:,1])
-plt.colorbar(scatter)
-ax.set_xlabel('X Label')
-ax.set_ylabel('Y Label')
-ax.set_zlabel('Z Label')
-plt.show()
-
-fig = plt.figure()
-ax = fig.add_subplot(projection='3d')	
-scatter = ax.scatter(cb[:, 0], cb[:, 1], cb[:, 2],c=g[:,2])
-plt.colorbar(scatter)
-ax.set_xlabel('X Label')
-ax.set_ylabel('Y Label')
-ax.set_zlabel('Z Label')
-plt.show()
+with open('../data/heart_data/hyper_elasticity_data_active.txt', 'w') as file:
+    for i in range(len(P_xx_array)):
+        file.write(f'{cb[:, 0][i]}, {cb[:, 1][i]}, {cb[:, 2][i]}, {g[:, 0][i]}, {g[:, 1][i]}, {g[:, 2][i]} ,{P_xx_array[i]}, {P_yy_array[i]}, {P_zz_array[i]}, {P_xy_array[i]}, {P_yx_array[i]}, {P_xz_array[i]}, {P_zx_array[i]}, {P_yz_array[i]},  {P_zy_array[i]}, {f0[:, 0][i]}, {f0[:, 1][i]} ,{f0[:, 2][i]}\n')
